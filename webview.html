@@ -1,0 +1,61 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+
+    <style type="text/css">
+    body {
+    margin:0;
+    background-color: transparent;
+    }
+    
+    video {
+        -webkit-filter: hue-rotate(90deg);
+        filter: hue-rotate(180deg) saturate(100%) brightness(100%) blur(0px);
+        }
+    </style>
+    </head>
+    
+    <body>
+        
+        <video width="{{VID_WIDTH}}" height="{{VID_HEIGHT}}" id="{{VID_NAME}}" preload="auto">
+            <source src="{{VID_FPATH}}", type="video/mp4">
+        </video>
+        
+        <!--<p id="ready"></p>-->
+        <p id="ready"></p>
+        <p id="rec_time"></p>
+        <p id="running"></p>
+        
+        <script>
+            var rec = document.getElementById("recording");
+            var a = -1;
+            document.getElementById("ready").innerHTML = rec;
+            document.getElementById("running").innerHTML = 'init';
+            function update_t() {
+                document.getElementById("rec_time").innerHTML = rec.currentTime;
+                document.getElementById("ready").innerHTML = rec.readyState;
+            }
+            
+            function initVideo(vid) {
+                //vid.load();
+                //vid.pause();
+                var id = setInterval(wait_for_load, 2);
+                function wait_for_load() {
+                    if (vid.readyState !== 4) {
+                        vid.play();
+                        //document.getElementById("running").innerHTML = 'yes';
+                    } else {
+                        vid.pause();
+                        clearInterval(id);
+                        //document.getElementById("running").innerHTML = 'cleared';
+                    }
+                }
+                //document.getElementById("running").innerHTML = 'start';
+            }
+            
+        </script>
+    
+    </body>
+    
+</html>
