@@ -11,9 +11,6 @@ html_path = "../"
 
 w, h = ui.get_window_size()
 frame = (0,0,w,h)
-#v = ui.View(frame=frame)
-
-load_framework('SceneKit')
 
 glClearColor = c.glClearColor
 glClearColor.restype = None
@@ -22,19 +19,6 @@ glClear = c.glClear
 glClear.restype = None
 glClear.argtypes = [c_uint]
 GL_COLOR_BUFFER_BIT = 0x00004000
-
-# use SceneViwer class to include a SceneView, and present at __init__, set_scene in background
-
-
-GLfloat = ctypes.c_float
-
-def glClearColor(red, green, blue, alpha, red_t=GLfloat, green_t=GLfloat, blue_t=GLfloat, alpha_t=GLfloat):
-    restype = None
-    argtypes = [red_t, green_t, blue_t, alpha_t]
-    cfunc = c.glClearColor
-    cfunc.restype = restype
-    cfunc.argtypes = argtypes
-    return cfunc(red, green, blue, alpha)
 
 def replace_str(text, dic):
     for x in dic:
@@ -49,11 +33,8 @@ class Game(Scene):
         self.root_node = Node(parent=self)
         objv = ObjCInstance(self.view)
         objv.glkView().setOpaque_(False)
-        print("")
         
-        #print(self.paused)
         self.highscore = 0
-        #self.movie = self.view.movie
         self.run_action(A.sequence(A.wait(2), A.call(self.initialize), \
                         A.call(self.show_start_menu)))
 
@@ -66,22 +47,13 @@ class Game(Scene):
     
     def show_start_menu(self):
         self.paused = True
-        #self.menu = SceneView()
-        #self.view.add_subview(self.menu)
         self.menu = MenuScene('Match3', 'Highscore: %i' % self.highscore, ['New Game'])
-        #menunode = Node(self.menu)
-        self.root_node.add_child(self.menu)
-        #self.menu.alpha=0
-        #self.menu2 = MenuScene('Match3', 'Highscore: %i' % self.highscore, ['New Game'])
-        #self.menu.bring_to_front()
+        #self.root_node.add_child(self.menu)
         self.present_modal_scene(self.menu)
     
     def draw(self):
-        #background(None)
         glClearColor(0,0,0, 0)
         glClear(GL_COLOR_BUFFER_BIT)
-        fill(1,0,0,0)
-        rect(100,100,800,400)
 
 def setup_view():
     movie = ui.WebView()
@@ -104,7 +76,7 @@ def setup_view():
     game = SceneView()
     game.frame = (0,0,1000,400)
     game.scene = Game(movie)
-    game.frame_interval = 30
+    game.frame_interval = 2
     game.shows_fps = True
     game.scene.fixed_time_step = True
 
@@ -125,4 +97,3 @@ def setup_view():
 if __name__ == '__main__':
     setup_view()
     
-    #run(Game(), PORTRAIT, frame_interval=2, show_fps=True)

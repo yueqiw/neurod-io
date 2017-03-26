@@ -2,7 +2,7 @@ from scene import *
 import ui, os
 from game_menu import MenuScene, ButtonNode
 A = Action
-rec_filepath = './data/530958091/natural_movie_one_38757-39661_ffmpeg_sepia_crf22_gs3_main31.mp4'
+rec_filepath = './data/530958091/natural_movie_one_38757-39661.mp4'
 html_path = "./"
 
 
