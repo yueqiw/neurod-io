@@ -6,7 +6,7 @@
     <style type="text/css">
     body {
     margin:0;
-    background-color: transparent;
+    background-color: black;
     }
     
     video {
@@ -44,11 +44,12 @@
                 function wait_for_load() {
                     if (vid.readyState !== 4) {
                         vid.play();
-                        //document.getElementById("running").innerHTML = 'yes';
+                        document.getElementById("running").innerHTML = 'yes';
                     } else {
+                        vid.currentTime = 0;
                         vid.pause();
                         clearInterval(id);
-                        //document.getElementById("running").innerHTML = 'cleared';
+                        document.getElementById("running").innerHTML = 'cleared';
                     }
                 }
                 //document.getElementById("running").innerHTML = 'start';

@@ -1,5 +1,7 @@
 from scene import *
 import ui, os
+import sys
+sys.path.append(os.path.abspath('../'))
 from game_menu import MenuScene, ButtonNode
 from objc_util import ObjCInstance, ObjCClass
 from objc_util import *
@@ -35,11 +37,14 @@ class Game(Scene):
         objv.glkView().setOpaque_(False)
         
         self.highscore = 0
-        self.run_action(A.sequence(A.wait(2), A.call(self.initialize), \
+        self.run_action(A.sequence(A.wait(2), A.call(self.initialize),
                         A.call(self.show_start_menu)))
 
     def initialize(self):
         self.movie.eval_js("initVideo(rec);")
+
+    def touch_began(self, touch):
+        self.movie.eval_js('rec.play();')
     
     #def did_change_size(self):
     #    self.movie.frame = (self.size.w/2 - self.movie_w/2, self.size.h/2 - self.movie_h/2, \
