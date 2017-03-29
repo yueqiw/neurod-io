@@ -10,47 +10,80 @@ A = Action
 rec_filepath = './data/530958091/natural_movie_one_38757-39661.mp4'
 data_filepath = './data/530958091/natural_movie_one_38757-39661/rec_data.npz'
 html_path = "./"
-IMG_SIZE = 512
+MOVIE_W, MOVIE_H = 512.0, 768.0
 DFF_THRESHOLD = 0.2
 REWARD = 100
 PENALTY = 50
-
 
 def replace_str(text, dic):
     for x in dic:
         text = text.replace(x, str(dic[x]))
     return text
 
-
 class Game(Scene):
-    def __init__(self, movie_view):
+    def __init__(self):
         Scene.__init__(self)
-        self.movie = movie_view
+        self.mode = None
 
     def setup(self):
         
-        self.scale = 1.0
+        self.set_scale()
+        
+        self.load_webview()
+        self.load_movie()
         self.fps = 30
         self.setup_clear_background()
         self.movie_start = False
-        #self.clear_background()
-        #
         self.root_node = Node(parent=self)
-        
-        #self.movie.frame = (self.size.w/2 - self.movie_w/2, self.size.h/2 - self.movie_h/2, \
-        #                    self.movie_w, self.movie_h)
-
         self.highscore = 0
         self.allow_touch = False
+        self.data_ready = False
         self.load_data(data_filepath)
         self.run_action(A.sequence(A.wait(0.1), A.call(self.movie_init), \
                         A.wait(1),  A.call(self.show_start_menu)))
         self.add_helper_buttons()
-        #self.paused = True
-        self.data_ready = False
+        self.did_change_size()
+    
+    def set_scale(self):
+        self.movie_scale = min(self.size.w / MOVIE_W, self.size.h / MOVIE_H)
+        self.movie_w = MOVIE_W * self.movie_scale
+        self.movie_h = MOVIE_H * self.movie_scale
+    
+    def did_change_size(self):
+        self.set_scale()
+        self.movie.frame = (self.view.width/2 - self.movie_w/2, self.view.height/2 - self.movie_h/2, \
+                            self.movie_w, self.movie_h)
+        self.movie.eval_js('rec.width = "' + str(self.movie_w) + '";')
         
-        print(self.data_ready)
-        #self.did_change_size()
+        self.root_node.position = self.size/2
+        
+    def load_webview(self):
+        self.movie = ui.WebView(name='movie')
+        
+        self.movie.background_color = None
+        self.movie.scales_page_to_fit = False
+        self.movie.touch_enabled = False
+        
+        self.view.add_subview(self.movie)
+        #objgameview = ObjCInstance(game)
+        #objgameview.bringSubviewToFront(objgameview.glkView())
+        self.movie.send_to_back()
+    
+    def load_movie(self, movie_filepath):
+        movie_filepath = "file://" + os.path.abspath(rec_filepath)
+        #print(rec_filepath)
+        html_dic = {'{{VID_FPATH}}': movie_filepath, '{{VID_NAME}}': 'recording', \
+                        '{{VID_WIDTH}}': self.movie_w}
+        html_file = os.path.join(os.path.abspath(html_path), 'webview.html')
+        with open(html_file) as f:
+            HTML_TEMPLATE = f.read()
+        movie_html = replace_str(HTML_TEMPLATE, html_dic)
+        self.movie.load_html(movie_html)
+    
+    def reload_webview(self):
+        self.view.remove_subview(self.movie)
+        self.load_subview()
+        self.load_movie(movie_filepath)
     
     #@ui.in_background
     def load_data(self, filepath):
@@ -120,10 +153,6 @@ class Game(Scene):
     
     def movie_pause(self):
         self.movie.eval_js("rec.pause();")
-    
-    def did_change_size(self):
-        self.movie.frame = (self.size.w/2 - self.movie_w/2, self.size.h/2 - self.movie_h/2, \
-                            self.movie.width, self.movie.height)
 
     def show_start_menu(self):
         self.paused = True
@@ -156,6 +185,7 @@ class Game(Scene):
         # need to add scale factor
         img_x, img_y = self.transform_touch(x, y)
         #print img_x, img_y
+        print self.size
         
         print ""
         cell_captured = self.evaluate_touch(img_x, img_y, frame_idx)
@@ -168,12 +198,12 @@ class Game(Scene):
     
     def transform_touch(self, x, y):
         img_y = int(round((x - self.movie.x) / float(self.scale)))
-        img_x = IMG_SIZE - int(round((y - self.movie.y) / float(self.scale)))
+        img_x = MOVIE_W - int(round((y - self.movie.y) / float(self.scale)))
         # in the image, img_x is n_row from top-left corner, and img_y is n_column
         return img_x, img_y
     
     def evaluate_touch(self, x, y, frame_idx):
-        if x < 0 or y < 0 or x >= IMG_SIZE or y >= IMG_SIZE:
+        if x < 0 or y < 0 or x >= MOVIE_W or y >= MOVIE_W:
             return None
         print x, y
         cells_touched = self.xy2cellids[x, y]  # (3,) array, e.g. (aaaaaaa, bbbbbbb, 0)
@@ -256,44 +286,16 @@ def setup_view():
     frame = (0,0,w,h)
     #main_view.frame = frame
 
-    movie = ui.WebView()
-    movie_filepath = "file://" + os.path.abspath(rec_filepath)
-    #print(rec_filepath)
-    #print(self.size.w, self.size.h)
-    movie_w, movie_h = 512, 768
-    html_dic = {'{{VID_FPATH}}': movie_filepath, '{{VID_NAME}}': 'recording', \
-                    '{{VID_WIDTH}}': movie_w, '{{VID_HEIGHT}}': movie_h}
-    html_file = os.path.join(os.path.abspath(html_path), 'webview.html')
-    with open(html_file) as f:
-        HTML_TEMPLATE = f.read()
-    movie_html = replace_str(HTML_TEMPLATE, html_dic)
-    #print(movie_html)
-
-    movie = ui.WebView(name='movie')
-    movie.background_color = None
-    movie.scales_page_to_fit = False
-    movie.touch_enabled = False
-
     game = SceneView()
     
     
-    game.scene = Game(movie)
+    game.scene = Game()
     game.frame = frame
     game.frame_interval = 2
     game.shows_fps = True
     game.scene.fixed_time_step = True
 
-    game.add_subview(movie)
-    movie.load_html(movie_html)
-
-    #print(v.bounds)
-
-    movie.frame = (game.width/2 - movie_w/2, game.height/2 - movie_h/2, \
-                        movie_w, movie_h)
-    movie.touch_enabled = False
-    #objgameview = ObjCInstance(game)
-    #objgameview.bringSubviewToFront(objgameview.glkView())
-    movie.send_to_back()
+    
     #main_view.add_subview(game)
     game.present('full_screen', hide_title_bar=True)
     #print movie.frame

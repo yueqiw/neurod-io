@@ -10,8 +10,7 @@
     }
     
     video {
-        transform: scale(1);
-        -webkit-filter: hue-rotate(90deg);
+        -webkit-filter: hue-rotate(180deg) saturate(300%) brightness(100%) blur(0px);
         filter: hue-rotate(180deg) saturate(300%) brightness(100%) blur(0px);
         }
     </style>
@@ -19,24 +18,17 @@
     
     <body>
         
-        <video width="{{VID_WIDTH}}" height="{{VID_HEIGHT}}" id="{{VID_NAME}}" preload="auto">
+        <video width="{{VID_WIDTH}}" id="{{VID_NAME}}" preload="auto">
             <source src="{{VID_FPATH}}", type="video/mp4">
         </video>
         
-        <!--<p id="ready"></p>-->
+        <!--<p id="ready"></p>
         <p id="ready"></p>
         <p id="rec_time"></p>
-        <p id="running"></p>
+        <p id="running"></p>-->
         
         <script>
             var rec = document.getElementById("recording");
-            var a = -1;
-            document.getElementById("ready").innerHTML = rec;
-            document.getElementById("running").innerHTML = 'init';
-            function update_t() {
-                document.getElementById("rec_time").innerHTML = rec.currentTime;
-                document.getElementById("ready").innerHTML = rec.readyState;
-            }
             
             function initVideo(vid) {
                 //vid.load();
@@ -54,6 +46,14 @@
                     }
                 }
                 //document.getElementById("running").innerHTML = 'start';
+            }
+            
+            //document.getElementById("ready").innerHTML = rec;
+            //document.getElementById("running").innerHTML = 'init';
+            
+            function update_t() {
+                document.getElementById("rec_time").innerHTML = rec.currentTime;
+                document.getElementById("ready").innerHTML = rec.readyState;
             }
             
         </script>
