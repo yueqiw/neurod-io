@@ -32,6 +32,7 @@ class Game(Scene):
         self.scale = 1.0
         self.fps = 30
         self.setup_clear_background()
+        self.movie_start = False
         #self.clear_background()
         #
         self.root_node = Node(parent=self)
@@ -60,6 +61,7 @@ class Game(Scene):
         all_cell_dff = data['slice_all_dff']
         self.xy2cellids = data['xy2cellids']  # (512, 512, 3) with 3 layers for overlap ROIs
         self.list_xyones = data['list_xyones']
+        self
         self.all_cell_fire = all_cell_dff > DFF_THRESHOLD
         del all_cell_dff
         self.data_ready = True
@@ -90,14 +92,11 @@ class Game(Scene):
 
     def stop(self):
         del self.cell_specimen_ids 
-        del self.slice_all_dff
+        del self.all_cell_fire
         del self.xy2cellids
         del self.list_xyones
     
-    def update(self):
-        #update time
-        #update loading
-        pass
+    
         
     def new_game(self):
         self.root_node.run_action(A.sequence(A.fade_to(0, 0.35), A.remove()))
@@ -109,7 +108,9 @@ class Game(Scene):
         self.paused = False
         self.allow_touch = True
         self.movie_play()
+        self.movie_start = True
         self.start_time = self.t
+        self.movie_time = 0.0
 
     def movie_init(self):
         self.movie.eval_js("initVideo(rec);")
@@ -126,7 +127,7 @@ class Game(Scene):
 
     def show_start_menu(self):
         self.paused = True
-        self.menu = MenuScene('Match3', 'Highscore: %i' % self.highscore, ['New Game'])
+        self.menu = MenuScene('Ophys.io', 'Highscore: %i' % self.highscore, ['New Game'])
         #self.menu.view.bring_to_front()
         self.present_modal_scene(self.menu)
         
@@ -149,7 +150,7 @@ class Game(Scene):
         #print x, y
         #print self.movie.frame
         time_elapsed = self.t - self.start_time
-        current_time = float(self.movie.eval_js('rec.currentTime'))
+        current_time = self.movie_time
         frame_idx = current_time * self.fps
         #frame_idx = int(current_time * self.fps)
         # need to add scale factor
@@ -161,13 +162,14 @@ class Game(Scene):
         #print cell_captured
         self.evaluate_reward(cell_captured)
         
-        print current_time
-        print time_elapsed
+        #print current_time
+        #print time_elapsed
         #print frame_idx
     
     def transform_touch(self, x, y):
-        img_x = int(round((x - self.movie.x) / float(self.scale)))
-        img_y = IMG_SIZE - int(round((y - self.movie.y) / float(self.scale)))
+        img_y = int(round((x - self.movie.x) / float(self.scale)))
+        img_x = IMG_SIZE - int(round((y - self.movie.y) / float(self.scale)))
+        # in the image, img_x is n_row from top-left corner, and img_y is n_column
         return img_x, img_y
     
     def evaluate_touch(self, x, y, frame_idx):
@@ -199,6 +201,12 @@ class Game(Scene):
             self.score -= PENALTY
             sound.play_effect('arcade:Jump_5')
         #self.score_label.text = str(self.score)
+    
+    def update(self):
+        if self.movie_start is True:
+            self.movie_time = float(self.movie.eval_js('rec.currentTime'))
+        #update time
+        pass
     
     def draw(self):
         self.clear_background()
@@ -243,9 +251,10 @@ class Game(Scene):
         self.view.add_subview(self.button3)
 
 def setup_view():
-    main_view = ui.View()
+    #main_view = ui.View()
     w, h = ui.get_window_size()
     frame = (0,0,w,h)
+    #main_view.frame = frame
 
     movie = ui.WebView()
     movie_filepath = "file://" + os.path.abspath(rec_filepath)
@@ -266,8 +275,10 @@ def setup_view():
     movie.touch_enabled = False
 
     game = SceneView()
-    game.frame = frame
+    
+    
     game.scene = Game(movie)
+    game.frame = frame
     game.frame_interval = 2
     game.shows_fps = True
     game.scene.fixed_time_step = True
@@ -283,8 +294,9 @@ def setup_view():
     #objgameview = ObjCInstance(game)
     #objgameview.bringSubviewToFront(objgameview.glkView())
     movie.send_to_back()
-    main_view.add_subview(game)
-    main_view.present('full_screen', hide_title_bar=True)
+    #main_view.add_subview(game)
+    game.present('full_screen', hide_title_bar=True)
+    #print movie.frame
 
 
 if __name__ == '__main__':
