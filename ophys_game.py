@@ -26,50 +26,67 @@ class Game(Scene):
         self.mode = None
 
     def setup(self):
-        
         self.set_scale()
-        
         self.load_webview()
-        self.load_movie()
+        self.load_movie(duration=30)
         self.fps = 30
         self.setup_clear_background()
-        self.movie_start = False
-        self.root_node = Node(parent=self)
-        self.highscore = 0
-        self.allow_touch = False
+        self.movie_playing = False
+        self.root_node = Node(parent=self, z_position=0.5)
+        self.highscore = self.load_highscore()
         self.data_ready = False
         self.load_data(data_filepath)
         self.run_action(A.sequence(A.wait(0.1), A.call(self.movie_init), \
-                        A.wait(1),  A.call(self.show_start_menu)))
-        self.add_helper_buttons()
+                        A.wait(0.5),  A.call(self.show_start_menu)))
+        #self.add_helper_buttons()
+        self.add_buttons()
         self.did_change_size()
-    
+
+    def add_buttons(self):
+        scoretext_font = ('Avenir Next', 30)
+        score_font = ('Avenir Next', 42)
+        time_font = ('Avenir Next Condensed', 36)
+        self.scoretext_label = LabelNode('Neuro Coins', font=scoretext_font, parent=self)
+        self.scoretext_label.anchor_point = (0.5, 1)
+        self.score_label = LabelNode('0', font=score_font, parent=self)
+        self.score_label.anchor_point = (0.5, 1)
+
+        self.time_label = LabelNode('00:00', font=time_font, parent=self)
+        self.time_label.anchor_point = (0, 1)
+        self.pause_button = SpriteNode('iow:pause_32', position=(32, self.size.h-36), parent=self)
+
     def set_scale(self):
         self.movie_scale = min(self.size.w / MOVIE_W, self.size.h / MOVIE_H)
         self.movie_w = MOVIE_W * self.movie_scale
         self.movie_h = MOVIE_H * self.movie_scale
-    
+
     def did_change_size(self):
         self.set_scale()
         self.movie.frame = (self.view.width/2 - self.movie_w/2, self.view.height/2 - self.movie_h/2, \
                             self.movie_w, self.movie_h)
         self.movie.eval_js('rec.width = "' + str(self.movie_w) + '";')
-        
-        self.root_node.position = self.size/2
-        
+
+        self.root_node.position = (0.0, 0.0)
+        self.scoretext_label.position = (self.size.w - 110, self.size.h - 20)
+        self.score_label.position = (self.size.w - 110, self.size.h - 60)
+        self.time_label.position = (60, self.size.h - 10)
+        self.pause_button.position = (32, self.size.h-32)
+
     def load_webview(self):
         self.movie = ui.WebView(name='movie')
-        
+
         self.movie.background_color = None
         self.movie.scales_page_to_fit = False
         self.movie.touch_enabled = False
-        
+
         self.view.add_subview(self.movie)
         #objgameview = ObjCInstance(game)
         #objgameview.bringSubviewToFront(objgameview.glkView())
         self.movie.send_to_back()
-    
-    def load_movie(self, movie_filepath):
+
+    def load_movie(self, movie_filepath=None, duration=None):
+        self.game_duration = 30
+        self.sec_left = self.game_duration
         movie_filepath = "file://" + os.path.abspath(rec_filepath)
         #print(rec_filepath)
         html_dic = {'{{VID_FPATH}}': movie_filepath, '{{VID_NAME}}': 'recording', \
@@ -79,12 +96,12 @@ class Game(Scene):
             HTML_TEMPLATE = f.read()
         movie_html = replace_str(HTML_TEMPLATE, html_dic)
         self.movie.load_html(movie_html)
-    
+
     def reload_webview(self):
         self.view.remove_subview(self.movie)
         self.load_subview()
         self.load_movie(movie_filepath)
-    
+
     #@ui.in_background
     def load_data(self, filepath):
         self.data_ready = False
@@ -119,47 +136,170 @@ class Game(Scene):
     def clear_background(self):
         self.glClearColor(0,0,0,0)
         self.glClear(self.GL_COLOR_BUFFER_BIT)
-    
+
     def scene_pause(self):
         self.paused = True
 
     def stop(self):
-        del self.cell_specimen_ids 
+        del self.cell_specimen_ids
         del self.all_cell_fire
         del self.xy2cellids
         del self.list_xyones
-    
-    
-        
+
     def new_game(self):
-        self.root_node.run_action(A.sequence(A.fade_to(0, 0.35), A.remove()))
         # remove webview
         # add webview
         # set root node
         self.score = 0
         #self.start_time = self.t
         self.paused = False
-        self.allow_touch = True
+        self.movie.eval_js('rec.currentTime=0;')
         self.movie_play()
-        self.movie_start = True
         self.start_time = self.t
-        self.movie_time = 0.0
+
+    def end_game(self):
+        if self.score > self.highscore:
+            with open('.OphysHighscore', 'w') as f:
+                f.write(str(self.score))
+            self.highscore = self.score
+        sound.play_effect('digital:ZapTwoTone2')
+        self.show_game_over_menu()
 
     def movie_init(self):
         self.movie.eval_js("initVideo(rec);")
-    
+        self.movie_playing = False
+
     def movie_play(self):
         self.movie.eval_js('rec.play();')
-    
+        self.movie_playing = True
+
     def movie_pause(self):
         self.movie.eval_js("rec.pause();")
+        self.movie_playing = False
 
     def show_start_menu(self):
         self.paused = True
-        self.menu = MenuScene('Ophys.io', 'Highscore: %i' % self.highscore, ['New Game'])
+        self.menu = MenuScene('Neuron I/O', 'Highscore: %i' % self.highscore, ['New Game'])
         #self.menu.view.bring_to_front()
         self.present_modal_scene(self.menu)
-        
+
+    def show_pause_menu(self):
+        self.movie_pause()
+        self.paused = True
+
+        self.menu = MenuScene('Paused', 'Highscore: %i' % self.highscore, ['Continue', 'New Game'])
+        self.present_modal_scene(self.menu)
+
+    def show_game_over_menu(self):
+        self.movie_pause()
+        self.paused = True
+        self.menu = MenuScene('Finished!', 'Score: %i' % (self.score), ['New Game'])
+        self.present_modal_scene(self.menu)
+
+    def touch_began(self, touch):
+        if self.paused or not self.movie_playing:
+            return
+        if touch.location.x < 48 and touch.location.y > self.size.h - 48:
+            self.show_pause_menu()
+            return
+        x, y = touch.location
+        #scene_time = self.t - self.start_time
+        frame_idx = int(self.movie_time * self.fps)
+        img_x, img_y = self.transform_touch(x, y)
+        cell_captured = self.evaluate_touch(img_x, img_y, frame_idx)
+        self.evaluate_reward(cell_captured, touch.location)
+
+        #print self.root_node.children
+        #print x, y
+        #print img_x, img_y
+        #print cell_captured
+        #print current_time
+        #print time_elapsed
+        #print frame_idx
+        print ""
+
+    def transform_touch(self, x, y):
+        img_y = int(round((x - self.movie.x) / float(self.movie_scale)))
+        img_x = MOVIE_W - int(round((y - self.movie.y) / float(self.movie_scale)))
+        # in the image, img_x is n_row from top-left corner, and img_y is n_column
+        return img_x, img_y
+
+    def evaluate_touch(self, x, y, frame_idx):
+        if x < 0 or y < 0 or x >= MOVIE_W or y >= MOVIE_W:
+            return 'outside'
+        print x, y
+        cells_touched = self.xy2cellids[x, y]  # (3,) array, e.g. (aaaaaaa, bbbbbbb, 0)
+        print cells_touched
+        if not cells_touched.any():
+            capture = False
+        else:
+            curr_fire_idx = self.all_cell_fire[:, frame_idx].nonzero()
+            print frame_idx
+            print curr_fire_idx
+            cells_firing = self.cell_specimen_ids[curr_fire_idx]
+            print cells_firing
+            cells_firing_touched = np.intersect1d(cells_touched, cells_firing)
+            if not cells_firing_touched.any():
+                capture = False
+            else:
+                capture = cells_firing_touched[0]
+        return capture
+
+    def evaluate_reward(self, cell_id, location):
+        if cell_id == 'outside':
+            return
+        if cell_id:
+            added_score = REWARD
+            sound.play_effect('arcade:Coin_5')
+        else:
+            added_score = -PENALTY
+            sound.play_effect('arcade:Jump_5')
+        self.score += added_score
+        self.score_label.text = str(self.score)
+        self.show_points(added_score, location)
+        #self.score_label.text = str(self.score)
+
+    def show_points(self, points, pos):
+        if points > 0:
+            points_label = '+%i' % (points,)
+            label_color = '#00ff00'
+        else:
+            points_label = '%i' % (points,)
+            label_color = '#ff0000'
+        label = LabelNode(points_label, font=('Avenir Next Condensed', 40), color=label_color, position=pos, z_position=1)
+        label.run_action(A.sequence(A.wait(0.5), A.fade_to(0, 0.5)))
+        label.run_action(A.sequence(A.move_by(0, 100, 1), A.remove()))
+        self.root_node.add_child(label)
+
+    def update(self):
+        if self.movie_playing is True:
+            self.movie_time = float(self.movie.eval_js('rec.currentTime'))
+            self.sec_left = max(0, self.game_duration - self.movie_time)
+        self.time_label.text = '%02d:%02d' % (self.sec_left/60, self.sec_left%60)
+        if self.sec_left == 0:
+            self.end_game()
+        pass
+
+    def draw(self):
+        self.clear_background()
+
+    def menu_button_selected(self, title):
+        if title == 'Continue':
+            self.dismiss_modal_scene()
+            self.menu = None
+            self.paused = False
+            self.movie_play()
+        elif title == 'New Game':
+            self.dismiss_modal_scene()
+            self.menu = None
+            self.new_game()
+
+    def load_highscore(self):
+        try:
+            with open('.OphysHighscore', 'r') as f:
+                return int(f.read())
+        except:
+            return 0
 
     def button_pause(self, sender):
         self.movie_pause()
@@ -169,102 +309,6 @@ class Game(Scene):
 
     def button_init(self, sender):
         self.movie_init()
-
-    def touch_began(self, touch):
-        if self.allow_touch is False:
-            return
-        #print self.paused
-        #self.paused = True
-        x, y = touch.location
-        #print x, y
-        #print self.movie.frame
-        time_elapsed = self.t - self.start_time
-        current_time = self.movie_time
-        frame_idx = current_time * self.fps
-        #frame_idx = int(current_time * self.fps)
-        # need to add scale factor
-        img_x, img_y = self.transform_touch(x, y)
-        #print img_x, img_y
-        print self.size
-        
-        print ""
-        cell_captured = self.evaluate_touch(img_x, img_y, frame_idx)
-        #print cell_captured
-        self.evaluate_reward(cell_captured)
-        
-        #print current_time
-        #print time_elapsed
-        #print frame_idx
-    
-    def transform_touch(self, x, y):
-        img_y = int(round((x - self.movie.x) / float(self.scale)))
-        img_x = MOVIE_W - int(round((y - self.movie.y) / float(self.scale)))
-        # in the image, img_x is n_row from top-left corner, and img_y is n_column
-        return img_x, img_y
-    
-    def evaluate_touch(self, x, y, frame_idx):
-        if x < 0 or y < 0 or x >= MOVIE_W or y >= MOVIE_W:
-            return None
-        print x, y
-        cells_touched = self.xy2cellids[x, y]  # (3,) array, e.g. (aaaaaaa, bbbbbbb, 0)
-        print cells_touched
-        if not cells_touched.any():
-            capture = None
-        else:
-            curr_fire_idx = self.all_cell_fire[:, frame_idx].nonzero()
-            print frame_idx
-            print curr_fire_idx
-            cells_firing = self.cell_specimen_ids[curr_fire_idx]
-            print cells_firing
-            cells_firing_touched = np.intersect1d(cells_touched, cells_firing)
-            if not cells_firing_touched.any():
-                capture = None
-            else:
-                capture = cells_firing_touched[0]
-        return capture
-    
-    def evaluate_reward(self, cell_id):
-        if cell_id:
-            self.score += REWARD
-            sound.play_effect('arcade:Coin_5')
-        else:
-            self.score -= PENALTY
-            sound.play_effect('arcade:Jump_5')
-        #self.score_label.text = str(self.score)
-    
-    def update(self):
-        if self.movie_start is True:
-            self.movie_time = float(self.movie.eval_js('rec.currentTime'))
-        #update time
-        pass
-    
-    def draw(self):
-        self.clear_background()
-        #if self.game_end is True:
-        #    self.draw_frame()
-        #    return
-        self.draw_frame()
-
-        #self.img_idx += 1
-        #if self.img_idx >= self.nframe:
-        #    self.img_idx = self.nframe - 1
-        #    self.game_end = True
-        #    self.paused = True
-            #self.empty_cache()
-
-    def draw_frame(self):
-        pass
-        #currTime = self.movie.eval_js('document.getElementById("recording").currentTime')
-        #print currTime
-    
-    
-    def menu_button_selected(self, title):
-        if title in ('Continue', 'New Game'):
-            self.dismiss_modal_scene()
-            self.menu = None
-            self.paused = False
-            if title == 'New Game':
-                self.new_game()
 
     def add_helper_buttons(self):
         self.button1 = ui.Button(title='initialize')
@@ -285,21 +329,15 @@ def setup_view():
     w, h = ui.get_window_size()
     frame = (0,0,w,h)
     #main_view.frame = frame
-
     game = SceneView()
-    
-    
     game.scene = Game()
     game.frame = frame
     game.frame_interval = 2
     game.shows_fps = True
     game.scene.fixed_time_step = True
-
-    
     #main_view.add_subview(game)
     game.present('full_screen', hide_title_bar=True)
     #print movie.frame
-
 
 if __name__ == '__main__':
     setup_view()
