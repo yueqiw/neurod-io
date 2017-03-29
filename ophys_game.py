@@ -7,13 +7,17 @@ import ctypes
 import sound
 import time
 A = Action
-rec_filepath = './data/530958091/natural_movie_one_38757-39661.mp4'
-data_filepath = './data/530958091/natural_movie_one_38757-39661/rec_data.npz'
 html_path = "./"
 MOVIE_W, MOVIE_H = 512.0, 768.0
+FPS = 30
 DFF_THRESHOLD = 0.2
 REWARD = 100
 PENALTY = 50
+
+FILEPATH_LIST = ['./data/496908818/natural_movie_one_70290-71191', './data/496935917/natural_movie_one_31442-32343', './data/496935917/natural_movie_two_63943-64844', './data/500964514/natural_movie_one_70426-71331', './data/501271265/natural_movie_one_38756-39660', './data/501271265/natural_movie_three_19746-23366', './data/501317920/natural_movie_one_70463-71367', './data/501337989/natural_movie_one_31520-32423', './data/501337989/natural_movie_two_64104-65007', './data/501498760/natural_movie_one_70439-71342', './data/501773889/natural_movie_one_31524-32428', './data/501773889/natural_movie_two_64128-65032', './data/501788003/natural_movie_one_31521-32425', './data/501788003/natural_movie_two_64122-65026', './data/501839084/natural_movie_one_31452-32354', './data/501839084/natural_movie_two_63966-64867', './data/501876401/natural_movie_one_38682-39584', './data/501876401/natural_movie_three_19716-23327', './data/530958091/natural_movie_one_38757-39661', './data/530958091/natural_movie_three_19750-23369']
+
+chosen = 5
+FILEPATH = FILEPATH_LIST[chosen]
 
 def replace_str(text, dic):
     for x in dic:
@@ -26,10 +30,12 @@ class Game(Scene):
         self.mode = None
 
     def setup(self):
+        movie_filepath = "file://" + os.path.abspath(FILEPATH + '.mp4')
+        data_filepath = os.path.abspath(FILEPATH + '/rec_data.npz')
         self.set_scale()
         self.load_webview()
-        self.load_movie(duration=30)
-        self.fps = 30
+        self.load_movie(movie_filepath=movie_filepath, duration=30)
+        self.fps = FPS
         self.setup_clear_background()
         self.movie_playing = False
         self.root_node = Node(parent=self, z_position=0.5)
@@ -43,10 +49,10 @@ class Game(Scene):
         self.did_change_size()
 
     def add_buttons(self):
-        scoretext_font = ('Avenir Next', 30)
+        scoretext_font = ('Avenir Next Bold', 30)
         score_font = ('Avenir Next', 42)
         time_font = ('Avenir Next Condensed', 36)
-        self.scoretext_label = LabelNode('Neuro Coins', font=scoretext_font, parent=self)
+        self.scoretext_label = LabelNode('Neuro Coins', font=scoretext_font, color='#00e20b', parent=self)
         self.scoretext_label.anchor_point = (0.5, 1)
         self.score_label = LabelNode('0', font=score_font, parent=self)
         self.score_label.anchor_point = (0.5, 1)
@@ -87,7 +93,7 @@ class Game(Scene):
     def load_movie(self, movie_filepath=None, duration=None):
         self.game_duration = 30
         self.sec_left = self.game_duration
-        movie_filepath = "file://" + os.path.abspath(rec_filepath)
+        
         #print(rec_filepath)
         html_dic = {'{{VID_FPATH}}': movie_filepath, '{{VID_NAME}}': 'recording', \
                         '{{VID_WIDTH}}': self.movie_w}
@@ -116,7 +122,7 @@ class Game(Scene):
         del all_cell_dff
         self.data_ready = True
         tend = time.time()
-        print(tend - tstart)
+        #print(tend - tstart)
         #print(len(self.cell_specimen_ids))
         #print(len(self.slice_all_dff))
         #print(len(self.xy2cellids))
@@ -216,7 +222,7 @@ class Game(Scene):
         #print current_time
         #print time_elapsed
         #print frame_idx
-        print ""
+        #print ""
 
     def transform_touch(self, x, y):
         img_y = int(round((x - self.movie.x) / float(self.movie_scale)))
@@ -227,17 +233,15 @@ class Game(Scene):
     def evaluate_touch(self, x, y, frame_idx):
         if x < 0 or y < 0 or x >= MOVIE_W or y >= MOVIE_W:
             return 'outside'
-        print x, y
+        #print x, y
         cells_touched = self.xy2cellids[x, y]  # (3,) array, e.g. (aaaaaaa, bbbbbbb, 0)
-        print cells_touched
+        #print cells_touched
         if not cells_touched.any():
             capture = False
         else:
             curr_fire_idx = self.all_cell_fire[:, frame_idx].nonzero()
-            print frame_idx
-            print curr_fire_idx
             cells_firing = self.cell_specimen_ids[curr_fire_idx]
-            print cells_firing
+            #print cells_firing
             cells_firing_touched = np.intersect1d(cells_touched, cells_firing)
             if not cells_firing_touched.any():
                 capture = False
@@ -256,6 +260,10 @@ class Game(Scene):
             sound.play_effect('arcade:Jump_5')
         self.score += added_score
         self.score_label.text = str(self.score)
+        if self.score > 0:
+            self.score_label.color = '#00ff00'
+        else:
+            self.score_label.color = '#ff0000'
         self.show_points(added_score, location)
         #self.score_label.text = str(self.score)
 
