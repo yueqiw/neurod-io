@@ -86,7 +86,9 @@ class Game(Scene):
         self.movie.touch_enabled = False
 
         self.view.add_subview(self.movie)
-        #objgameview = ObjCInstance(game)
+        objwebview = ObjCInstance(self.movie)
+        objwebview.webView().allowsInlineMediaPlayback = True
+        #objgameview = ObjCInstance(self.view)
         #objgameview.bringSubviewToFront(objgameview.glkView())
         self.movie.send_to_back()
 
