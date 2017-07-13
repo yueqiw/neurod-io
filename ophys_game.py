@@ -8,7 +8,15 @@ import sound
 import time
 A = Action
 html_path = "./"
-MOVIE_W, MOVIE_H = 512.0, 768.0
+
+# to display both neurons and visual stimuli
+#MOVIE_W, MOVIE_H, SHIFT_H = 512.0, 768.0, 0.0
+#ZOOM, TOP, LEFT = 1.0, 0.0, 0.0
+
+# to display only the neurons without visual stimuli
+MOVIE_W, MOVIE_H, SHIFT_H = 512.0, 512.0, -256.0
+ZOOM, TOP, LEFT = 2.0, 128.0, 128.0
+
 FPS = 30
 DFF_THRESHOLD = 0.2
 REWARD = 100
@@ -16,7 +24,7 @@ PENALTY = 50
 
 FILEPATH_LIST = ['./data/496908818/natural_movie_one_70290-71191', './data/496935917/natural_movie_one_31442-32343', './data/496935917/natural_movie_two_63943-64844', './data/500964514/natural_movie_one_70426-71331', './data/501271265/natural_movie_one_38756-39660', './data/501271265/natural_movie_three_19746-23366', './data/501317920/natural_movie_one_70463-71367', './data/501337989/natural_movie_one_31520-32423', './data/501337989/natural_movie_two_64104-65007', './data/501498760/natural_movie_one_70439-71342', './data/501773889/natural_movie_one_31524-32428', './data/501773889/natural_movie_two_64128-65032', './data/501788003/natural_movie_one_31521-32425', './data/501788003/natural_movie_two_64122-65026', './data/501839084/natural_movie_one_31452-32354', './data/501839084/natural_movie_two_63966-64867', './data/501876401/natural_movie_one_38682-39584', './data/501876401/natural_movie_three_19716-23327', './data/530958091/natural_movie_one_38757-39661', './data/530958091/natural_movie_three_19750-23369']
 
-chosen = 5
+chosen = 7
 FILEPATH = FILEPATH_LIST[chosen]
 
 def replace_str(text, dic):
@@ -62,14 +70,18 @@ class Game(Scene):
         self.pause_button = SpriteNode('iow:pause_32', position=(32, self.size.h-36), parent=self)
 
     def set_scale(self):
-        self.movie_scale = min(self.size.w / MOVIE_W, self.size.h / MOVIE_H)
-        self.movie_w = MOVIE_W * self.movie_scale
-        self.movie_h = MOVIE_H * self.movie_scale
+        self.movie_scale = min(self.size.w / (MOVIE_W/ZOOM), self.size.h / (MOVIE_H/ZOOM))
+        self.frame_w = MOVIE_W / ZOOM * self.movie_scale
+        self.frame_h = MOVIE_H / ZOOM * self.movie_scale
+        self.movie_w = MOVIE_W * self.movie_scale 
+        self.shift_h = SHIFT_H * self.movie_scale
+        self.top = TOP * self.movie_scale
+        self.left = LEFT * self.movie_scale
 
     def did_change_size(self):
         self.set_scale()
-        self.movie.frame = (self.view.width/2 - self.movie_w/2, self.view.height/2 - self.movie_h/2, \
-                            self.movie_w, self.movie_h)
+        self.movie.frame = (self.view.width/2 - self.frame_w/2, self.view.height/2 - self.frame_h/2, \
+                            self.frame_w, self.frame_h)
         self.movie.eval_js('rec.width = "' + str(self.movie_w) + '";')
 
         self.root_node.position = (0.0, 0.0)
@@ -98,11 +110,14 @@ class Game(Scene):
         
         #print(rec_filepath)
         html_dic = {'{{VID_FPATH}}': movie_filepath, '{{VID_NAME}}': 'recording', \
-                        '{{VID_WIDTH}}': self.movie_w}
+                        '{{VID_WIDTH}}': self.movie_w, \
+                        '{{VID_TOP}}': str(self.shift_h - self.top) + "px", \
+                        '{{VID_LEFT}}': str(-self.left) + "px"}
         html_file = os.path.join(os.path.abspath(html_path), 'webview.html')
         with open(html_file) as f:
             HTML_TEMPLATE = f.read()
         movie_html = replace_str(HTML_TEMPLATE, html_dic)
+        #print(movie_html)
         self.movie.load_html(movie_html)
 
     def reload_webview(self):
@@ -228,12 +243,16 @@ class Game(Scene):
 
     def transform_touch(self, x, y):
         img_y = int(round((x - self.movie.x) / float(self.movie_scale)))
-        img_x = MOVIE_W - int(round((y - self.movie.y) / float(self.movie_scale)))
+        img_y += LEFT
+        #print(img_y, x, self.movie.x)
+        img_x = MOVIE_W / ZOOM - int(round((y - self.movie.y) / float(self.movie_scale)))
+        img_x += TOP
+        #print(img_x, y, self.movie.y, self.movie_scale)
         # in the image, img_x is n_row from top-left corner, and img_y is n_column
         return img_x, img_y
 
     def evaluate_touch(self, x, y, frame_idx):
-        if x < 0 or y < 0 or x >= MOVIE_W or y >= MOVIE_W:
+        if x < TOP or y < LEFT or x >= MOVIE_W - TOP or y >= MOVIE_W - LEFT:
             return 'outside'
         #print x, y
         cells_touched = self.xy2cellids[x, y]  # (3,) array, e.g. (aaaaaaa, bbbbbbb, 0)

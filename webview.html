@@ -12,6 +12,10 @@
     video {
         -webkit-filter: hue-rotate(180deg) saturate(300%) brightness(120%) blur(1px);
         filter: hue-rotate(180deg) saturate(300%) brightness(120%) blur(1px);
+        object-fit: cover;
+        position: absolute;
+        top: var(--top);
+        left: var(--left);
         }
     </style>
     </head>
@@ -29,6 +33,8 @@
         
         <script>
             var rec = document.getElementById("recording");
+            rec.style.setProperty("--top", "{{VID_TOP}}");
+            rec.style.setProperty("--left", "{{VID_LEFT}}");
             
             function initVideo(vid) {
                 //vid.load();
