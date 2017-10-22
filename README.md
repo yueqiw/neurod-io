@@ -1,5 +1,5 @@
 ## Neuron I/O (beta)
-### An iOS game of in vivo neuronal acitivity in the brain
+### An iOS game of in vivo neuronal activity in the brain
 
 The idea of this game is to make it fun to interact with real-time recordings of neuronal activity in the brain. On a touch screen (iPhone/iPad), players tap onto these neurons right when they are "firing" (transient increase of fluorescence as individual neurons are being activated). To learn more about the data, visit [Allen Brain Observatory](http://observatory.brain-map.org/).
 
