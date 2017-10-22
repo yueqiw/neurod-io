@@ -131,10 +131,17 @@ class Game(Scene):
         tstart = time.time()
         data = np.load(filepath)
         self.cell_specimen_ids = data['cell_specimen_ids']
+        # a 1d array that maps the index of each cell to it's ID. 
+        # can be used to extract meta data. 
         all_cell_dff = data['slice_all_dff']
-        self.xy2cellids = data['xy2cellids']  # (512, 512, 3) with 3 layers for overlap ROIs
-        self.list_xyones = data['list_xyones']
-        self
+        # a (n_cell, n_frame) array of the average dF/F fluorescence level for each cell at each frame.
+        self.xy2cellidx = data['xy2cellidx']  
+        # a (512, 512) array with each pixel assigned to the index (0,1,2...) of the nearest ROI. 
+        # pixels not in any ROI are assigned to -1. 
+        self.cell_xyones = data['cell_xyones']
+        # a list of (n_px, 2) arrays. Each arrays is the (x,y) coordinates of 1's for a cell's mask. 
+        self.cell_centroids = data['cell_centroids']
+        # a (n_cell, 2) array of the centroids for each cell
         self.all_cell_fire = all_cell_dff > DFF_THRESHOLD
         del all_cell_dff
         self.data_ready = True
@@ -142,8 +149,8 @@ class Game(Scene):
         #print(tend - tstart)
         #print(len(self.cell_specimen_ids))
         #print(len(self.slice_all_dff))
-        #print(len(self.xy2cellids))
-        #print(len(self.list_xyones))
+        #print(len(self.xy2cellidx))
+        #print(len(self.cell_xyones))
 
     def setup_clear_background(self):
         self.glClearColor = c.glClearColor
@@ -166,8 +173,9 @@ class Game(Scene):
     def stop(self):
         del self.cell_specimen_ids
         del self.all_cell_fire
-        del self.xy2cellids
-        del self.list_xyones
+        del self.xy2cellidx
+        del self.cell_xyones
+        del self.cell_centroids
 
     def new_game(self):
         # remove webview
@@ -255,25 +263,23 @@ class Game(Scene):
         if x < TOP or y < LEFT or x >= MOVIE_W - TOP or y >= MOVIE_W - LEFT:
             return 'outside'
         #print x, y
-        cells_touched = self.xy2cellids[x, y]  # (3,) array, e.g. (aaaaaaa, bbbbbbb, 0)
+        cell_touched_idx = self.xy2cellidx[x, y]  # the cell index if in an cell ROI, else -1. 
         #print cells_touched
-        if not cells_touched.any():
-            capture = False
+        if cell_touched_idx == -1:
+            capture = None
         else:
             curr_fire_idx = self.all_cell_fire[:, frame_idx].nonzero()
-            cells_firing = self.cell_specimen_ids[curr_fire_idx]
-            #print cells_firing
-            cells_firing_touched = np.intersect1d(cells_touched, cells_firing)
-            if not cells_firing_touched.any():
-                capture = False
+            if cell_touched_dix in curr_fire_idx:
+                capture = cell_touched_idx
             else:
-                capture = cells_firing_touched[0]
+                capture = None
         return capture
 
     def evaluate_reward(self, cell_id, location):
         if cell_id == 'outside':
+            # no penalty. just skip the evaluation. 
             return
-        if cell_id:
+        if cell_id is not None:
             added_score = REWARD
             sound.play_effect('arcade:Coin_5')
         else:
