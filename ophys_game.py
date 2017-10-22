@@ -31,6 +31,7 @@ class Game(Scene):
         self.movie_playing = False
         self.root_node = Node(parent=self, z_position=0.5)
         self.highscore = self.load_highscore()
+        self.last_captured = -1
         self.data_ready = False
         self.load_data(data_filepath)
         self.run_action(A.sequence(A.wait(0.1), A.call(self.movie_init), \
@@ -287,6 +288,9 @@ class Game(Scene):
             return
         if cell_captured is not None:
             added_score = REWARD
+            if cell_captured == self.last_captured:
+                added_score /= 2.0
+            self.last_captured = cell_captured
             score_location = self.cell_centroids[cell_captured].astype('int')
             score_location = self.reverse_transform_touch(*score_location)
             sound.play_effect('arcade:Coin_5')
@@ -294,7 +298,7 @@ class Game(Scene):
             added_score = -PENALTY
             sound.play_effect('arcade:Jump_5')
         self.score += added_score
-        self.score_label.text = str(self.score)
+        self.score_label.text = str(int(self.score))
         if self.score > 0:
             self.score_label.color = '#00ff00'
         else:
