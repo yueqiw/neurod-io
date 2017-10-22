@@ -7,25 +7,8 @@ import ctypes
 import sound
 import time
 A = Action
-html_path = "./"
+from config import *
 
-# to display both neurons and visual stimuli
-#MOVIE_W, MOVIE_H, SHIFT_H = 512.0, 768.0, 0.0
-#ZOOM, TOP, LEFT = 1.0, 0.0, 0.0
-
-# to display only the neurons without visual stimuli
-MOVIE_W, MOVIE_H, SHIFT_H = 512.0, 512.0, -256.0
-ZOOM, TOP, LEFT = 2.0, 128.0, 128.0
-
-FPS = 30
-DFF_THRESHOLD = 0.2
-REWARD = 100
-PENALTY = 50
-
-FILEPATH_LIST = ['./data/496908818/natural_movie_one_70290-71191', './data/496935917/natural_movie_one_31442-32343', './data/496935917/natural_movie_two_63943-64844', './data/500964514/natural_movie_one_70426-71331', './data/501271265/natural_movie_one_38756-39660', './data/501271265/natural_movie_three_19746-23366', './data/501317920/natural_movie_one_70463-71367', './data/501337989/natural_movie_one_31520-32423', './data/501337989/natural_movie_two_64104-65007', './data/501498760/natural_movie_one_70439-71342', './data/501773889/natural_movie_one_31524-32428', './data/501773889/natural_movie_two_64128-65032', './data/501788003/natural_movie_one_31521-32425', './data/501788003/natural_movie_two_64122-65026', './data/501839084/natural_movie_one_31452-32354', './data/501839084/natural_movie_two_63966-64867', './data/501876401/natural_movie_one_38682-39584', './data/501876401/natural_movie_three_19716-23327', './data/530958091/natural_movie_one_38757-39661', './data/530958091/natural_movie_three_19750-23369']
-
-chosen = 7
-FILEPATH = FILEPATH_LIST[chosen]
 
 def replace_str(text, dic):
     for x in dic:
@@ -237,7 +220,8 @@ class Game(Scene):
         #scene_time = self.t - self.start_time
         frame_idx = int(self.movie_time * self.fps)
         img_x, img_y = self.transform_touch(x, y)
-        cell_captured = self.evaluate_touch(img_x, img_y, frame_idx)
+        cell_captured = self.evaluate_touch(img_x, img_y, frame_idx, \
+                                        method=EVAL_TOUCH_METHOD, radius=EVAL_TOUCH_RADIUS)
         self.evaluate_reward(cell_captured, touch.location)
 
         #print self.root_node.children
@@ -258,29 +242,53 @@ class Game(Scene):
         #print(img_x, y, self.movie.y, self.movie_scale)
         # in the image, img_x is n_row from top-left corner, and img_y is n_column
         return img_x, img_y
-
-    def evaluate_touch(self, x, y, frame_idx):
+    
+    def reverse_transform_touch(self, img_x, img_y):
+        x = img_y - LEFT
+        x = int(x * float(self.movie_scale)) + self.movie.x
+        y = img_x - TOP
+        y = int((MOVIE_W / ZOOM - y) * float(self.movie_scale)) + self.movie.y 
+        return x, y
+    
+    def evaluate_touch(self, x, y, frame_idx, method, radius):
         if x < TOP or y < LEFT or x >= MOVIE_W - TOP or y >= MOVIE_W - LEFT:
             return 'outside'
         #print x, y
-        cell_touched_idx = self.xy2cellidx[x, y]  # the cell index if in an cell ROI, else -1. 
-        #print cells_touched
-        if cell_touched_idx == -1:
-            capture = None
+        curr_fire_idx = self.all_cell_fire[:, frame_idx].nonzero()[0]
+        if method == "mask":
+            return self.evaluate_touch_by_mask(x, y, curr_fire_idx)
+        elif method == "distance":
+            return self.evaluate_touch_by_distance(x, y, curr_fire_idx, radius)
+        else: 
+            raise StandardError("need to specify touch evaluation method.")
+            
+    
+    def evaluate_touch_by_distance(self, x, y, curr_fire_idx, radius):
+        fire_centroids = self.cell_centroids[curr_fire_idx]
+        distance = np.sum((fire_centroids - np.array([[x, y]]))**2, axis=1)**0.5
+        min_dist_idx = distance.argmin()
+        if distance[min_dist_idx] <= radius:
+            return curr_fire_idx[min_dist_idx]
         else:
-            curr_fire_idx = self.all_cell_fire[:, frame_idx].nonzero()
-            if cell_touched_dix in curr_fire_idx:
-                capture = cell_touched_idx
-            else:
-                capture = None
-        return capture
+            return None
+        
+    def evaluate_touch_by_mask(self, x, y, curr_fire_idx):
+        cell_touched_idx = self.xy2cellidx[x, y]  # the cell index if in an cell ROI, else -1. 
+        
+        if cell_touched_idx in curr_fire_idx:
+            return cell_touched_idx
+        else:
+            return None # when idx is either -1 or wrong index
 
-    def evaluate_reward(self, cell_id, location):
-        if cell_id == 'outside':
+    def evaluate_reward(self, cell_captured, location):
+        score_location = location
+        if cell_captured == 'outside':
             # no penalty. just skip the evaluation. 
             return
-        if cell_id is not None:
+        if cell_captured is not None:
             added_score = REWARD
+            score_location = self.cell_centroids[cell_captured].astype('int')
+            score_location = self.reverse_transform_touch(*score_location)
             sound.play_effect('arcade:Coin_5')
         else:
             added_score = -PENALTY
@@ -291,7 +299,7 @@ class Game(Scene):
             self.score_label.color = '#00ff00'
         else:
             self.score_label.color = '#ff0000'
-        self.show_points(added_score, location)
+        self.show_points(added_score, score_location)
         #self.score_label.text = str(self.score)
 
     def show_points(self, points, pos):
