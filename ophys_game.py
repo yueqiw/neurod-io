@@ -128,6 +128,7 @@ class Game(Scene):
         # a (n_cell, 2) array of the centroids for each cell
         self.all_cell_fire = all_cell_dff > DFF_THRESHOLD
         del all_cell_dff
+        
         self.data_ready = True
         tend = time.time()
         #print(tend - tstart)
@@ -166,6 +167,7 @@ class Game(Scene):
         # add webview
         # set root node
         self.score = 0
+        self.cell_touched_ntimes = np.zeros_like(self.cell_specimen_ids)
         #self.start_time = self.t
         self.paused = False
         self.movie.eval_js('rec.currentTime=0;')
@@ -290,9 +292,12 @@ class Game(Scene):
             added_score = REWARD
             if cell_captured == self.last_captured:
                 added_score /= 2.0
+            if self.cell_touched_ntimes[cell_captured] == 0:
+                added_score *= 2.0
             self.last_captured = cell_captured
             score_location = self.cell_centroids[cell_captured].astype('int')
             score_location = self.reverse_transform_touch(*score_location)
+            self.cell_touched_ntimes[cell_captured] += 1
             sound.play_effect('arcade:Coin_5')
         else:
             added_score = -PENALTY
@@ -309,7 +314,10 @@ class Game(Scene):
     def show_points(self, points, pos):
         if points > 0:
             points_label = '+%i' % (points,)
-            label_color = '#00ff00'
+            if points > REWARD:
+                label_color = '#ffff00'
+            else:
+                label_color = '#00ff00'
         else:
             points_label = '%i' % (points,)
             label_color = '#ff0000'
