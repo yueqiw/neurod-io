@@ -352,7 +352,7 @@ class Game(Scene):
     def load_highscore(self):
         try:
             with open('.OphysHighscore', 'r') as f:
-                return int(f.read())
+                return int(float(f.read()))
         except:
             return 0
 
