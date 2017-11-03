@@ -6,6 +6,7 @@ from objc_util import *
 import ctypes
 import sound
 import time
+import random
 A = Action
 from config import *
 
@@ -18,14 +19,14 @@ def replace_str(text, dic):
 class Game(Scene):
     def __init__(self):
         Scene.__init__(self)
-        self.mode = None
+        self.filepath = FILEPATH
 
     def setup(self):
-        movie_filepath = "file://" + os.path.abspath(FILEPATH + '.mp4')
-        data_filepath = os.path.abspath(FILEPATH + '/rec_data.npz')
+        self.movie_filepath = "file://" + os.path.abspath(self.filepath + '.mp4')
+        self.data_filepath = os.path.abspath(self.filepath + '/rec_data.npz')
         self.set_scale()
         self.load_webview()
-        self.load_movie(movie_filepath=movie_filepath, duration=30)
+        self.load_movie(movie_filepath=self.movie_filepath, duration=30)
         self.fps = FPS
         self.setup_clear_background()
         self.movie_playing = False
@@ -33,7 +34,7 @@ class Game(Scene):
         self.highscore = self.load_highscore()
         self.last_captured = -1
         self.data_ready = False
-        self.load_data(data_filepath)
+        self.load_data(self.data_filepath)
         self.run_action(A.sequence(A.wait(0.1), A.call(self.movie_init), \
                         A.wait(0.5),  A.call(self.show_start_menu)))
         #self.add_helper_buttons()
@@ -106,8 +107,10 @@ class Game(Scene):
 
     def reload_webview(self):
         self.view.remove_subview(self.movie)
-        self.load_subview()
-        self.load_movie(movie_filepath)
+        for node in self.children:
+            node.remove_from_parent()
+        self.paused = False
+        self.setup()
 
     #@ui.in_background
     def load_data(self, filepath):
@@ -196,7 +199,7 @@ class Game(Scene):
 
     def show_start_menu(self):
         self.paused = True
-        self.menu = MenuScene('Neuron I/O', 'Highscore: %i' % self.highscore, ['New Game'])
+        self.menu = MenuScene('Neuron I/O', 'Highscore: %i' % self.highscore, ['New Game', 'Switch Experiment'])
         #self.menu.view.bring_to_front()
         self.present_modal_scene(self.menu)
 
@@ -204,13 +207,13 @@ class Game(Scene):
         self.movie_pause()
         self.paused = True
 
-        self.menu = MenuScene('Paused', 'Highscore: %i' % self.highscore, ['Continue', 'New Game'])
+        self.menu = MenuScene('Paused', 'Score: %i' % (self.score), ['Continue', 'New Game', 'Switch Experiment'])
         self.present_modal_scene(self.menu)
 
     def show_game_over_menu(self):
         self.movie_pause()
         self.paused = True
-        self.menu = MenuScene('Finished!', 'Score: %i' % (self.score), ['New Game'])
+        self.menu = MenuScene('Finished!', 'Score: %i' % (self.score), ['New Game', 'Switch Experiment'])
         self.present_modal_scene(self.menu)
 
     def touch_began(self, touch):
@@ -348,6 +351,11 @@ class Game(Scene):
             self.dismiss_modal_scene()
             self.menu = None
             self.new_game()
+        elif title == 'Switch Experiment':
+            self.dismiss_modal_scene()
+            self.menu = None
+            self.filepath = FILEPATH_LIST[random.choice(range(len(FILEPATH_LIST)))]
+            self.reload_webview()
 
     def load_highscore(self):
         try:
