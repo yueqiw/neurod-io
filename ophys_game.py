@@ -32,6 +32,7 @@ class Game(Scene):
         self.movie_playing = False
         self.root_node = Node(parent=self, z_position=0.5)
         self.highscore = self.load_highscore()
+        print self.highscore
         self.last_captured = -1
         self.data_ready = False
         self.load_data(self.data_filepath)
