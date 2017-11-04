@@ -16,7 +16,9 @@ Data source:
 <img src="assets/crop_sierra2_15fps_256.gif">
 </p>
 
+Notes on movie quality: Currently, the recording movies used in the demo are reconstructed from averaged fluorescent traces of each cell. So the video quality might not look ideal compared to the actual recordings. 
+
 TODO: 
-- Add a drop-down menu to select different movie recordings.
+- Add a drop-down menu to select different experiments.
 - Include more recordings.
 - Package into an App. 
