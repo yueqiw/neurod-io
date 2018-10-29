@@ -42,7 +42,7 @@ class Game(Scene):
         self.did_change_size()
 
     def add_buttons(self):
-        scoretext_font = ('Avenir Next Bold', 30)
+        scoretext_font = ('Avenir Next', 30)
         score_font = ('Avenir Next', 42)
         time_font = ('Avenir Next Condensed', 36)
         self.scoretext_label = LabelNode('Neuro Coins', font=scoretext_font, color='#00e20b', parent=self)
@@ -70,10 +70,10 @@ class Game(Scene):
         self.movie.eval_js('rec.width = "' + str(self.movie_w) + '";')
 
         self.root_node.position = (0.0, 0.0)
-        self.scoretext_label.position = (self.size.w - 110, self.size.h - 20)
-        self.score_label.position = (self.size.w - 110, self.size.h - 60)
-        self.time_label.position = (60, self.size.h - 10)
-        self.pause_button.position = (32, self.size.h-32)
+        self.scoretext_label.position = (self.size.w - 110, self.size.h - 48)
+        self.score_label.position = (self.size.w - 110, self.size.h - 88)
+        self.time_label.position = (60, self.size.h - 42)
+        self.pause_button.position = (32, self.size.h - 64)
 
     def load_webview(self):
         self.movie = ui.WebView(name='movie')
@@ -219,7 +219,7 @@ class Game(Scene):
     def touch_began(self, touch):
         if self.paused or not self.movie_playing:
             return
-        if touch.location.x < 48 and touch.location.y > self.size.h - 48:
+        if touch.location.x < 60 and touch.location.y > self.size.h - 86 and touch.location.y < self.size.h - 40:
             self.show_pause_menu()
             return
         x, y = touch.location
@@ -388,9 +388,10 @@ class Game(Scene):
         self.view.add_subview(self.button3)
 
 def setup_view():
-    #main_view = ui.View()
-    w, h = ui.get_window_size()
+    
+    w, h = ui.get_screen_size()
     frame = (0,0,w,h)
+    main_view = ui.View()
     #main_view.frame = frame
     game = SceneView()
     game.scene = Game()
@@ -398,8 +399,9 @@ def setup_view():
     game.frame_interval = 2
     game.shows_fps = True
     game.scene.fixed_time_step = True
-    #main_view.add_subview(game)
-    game.present('full_screen', hide_title_bar=True)
+    main_view.add_subview(game)
+    #game.present('full_screen', hide_title_bar=True)
+    main_view.present('full_screen', hide_title_bar=True)
     #print movie.frame
 
 if __name__ == '__main__':
