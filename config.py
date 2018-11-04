@@ -1,3 +1,4 @@
+#import pythonista
 html_path = "./"
 
 # to display both neurons and visual stimuli
