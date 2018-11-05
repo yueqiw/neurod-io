@@ -1,5 +1,5 @@
 ## neurod.io 
-### Fun iOS game of brain activity
+### Fun iOS game of brain activity (soon to be on iOS)
 
 Collect neuro coins by tapping onto the neurons right when they light up -- transient increase of fluorescence as neurons are "firing". Challenge yourself and see how many coins you can get! 
 
